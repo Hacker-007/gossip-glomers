@@ -34,4 +34,12 @@ impl Node {
         self.message_id += 1;
         builder
     }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn message_id(&self) -> usize {
+        self.message_id
+    }
 }
