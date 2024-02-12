@@ -9,10 +9,14 @@ use maelstrom::{
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type")]
-#[serde(rename_all = "snake_case")]
-enum UniqueIDPayload {
+#[serde(tag = "type", rename_all = "snake_case")]
+enum UniqueIDRequest {
     Generate,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum UniqueIDResponse {
     GenerateOk { id: String },
 }
 
@@ -41,9 +45,9 @@ pub fn main() -> anyhow::Result<()> {
     let mut node = initialize_node(init_line, &mut stdout)?;
     for line in lines {
         let line = line.context("unable to read line from stdin")?;
-        let message: Message<UniqueIDPayload> = line.parse()?;
+        let message: Message<UniqueIDRequest> = line.parse()?;
         node.respond_to(&message)
-            .with_payload(UniqueIDPayload::GenerateOk {
+            .with_payload(UniqueIDResponse::GenerateOk {
                 id: format!("id:{}:{}", node.id(), node.message_id()),
             })
             .build()

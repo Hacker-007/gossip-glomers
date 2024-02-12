@@ -9,11 +9,15 @@ use maelstrom::{
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type")]
-#[serde(rename_all = "snake_case")]
-enum EchoPayload {
+#[serde(tag = "type", rename_all = "snake_case")]
+enum EchoRequest {
     Echo { echo: String },
-    EchoOk { echo: String },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum EchoResponse {
+    EchoOk { echo: String }
 }
 
 fn initialize_node(line: String, stdout: &mut impl Write) -> anyhow::Result<Node> {
@@ -41,13 +45,10 @@ pub fn main() -> anyhow::Result<()> {
     let mut node = initialize_node(init_line, &mut stdout)?;
     for line in lines {
         let line = line.context("unable to read line from stdin")?;
-        let message: Message<EchoPayload> = line.parse()?;
-        let EchoPayload::Echo { echo } = message.payload() else {
-            panic!("expected echo message, but found something else")
-        };
-
+        let message: Message<EchoRequest> = line.parse()?;
+        let EchoRequest::Echo { echo } = message.payload();
         node.respond_to(&message)
-            .with_payload(EchoPayload::EchoOk {
+            .with_payload(EchoResponse::EchoOk {
                 echo: echo.to_string(),
             })
             .build()
