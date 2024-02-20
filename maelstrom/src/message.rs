@@ -43,67 +43,19 @@ pub(crate) struct MessageBody<P> {
     pub(crate) payload: P,
 }
 
-#[derive(Debug)]
-pub struct MessageBuilder<P = ()> {
-    pub(crate) message: Message<P>,
-}
-
-impl<P: Default> MessageBuilder<P> {
-    pub fn new(src: String, dest: String) -> Self {
-        Self {
-            message: Message {
-                src,
-                dest,
-                body: MessageBody {
-                    message_id: None,
-                    in_reply_to: None,
-                    payload: P::default(),
-                },
-            },
-        }
-    }
-}
-
-impl<P> MessageBuilder<P> {
-    pub(crate) fn message_id(mut self, message_id: Option<usize>) -> MessageBuilder<P> {
-        self.message.body.message_id = message_id;
-        self
-    }
-
-    pub(crate) fn in_reply_to(mut self, reply_to: Option<usize>) -> MessageBuilder<P> {
-        self.message.body.in_reply_to = reply_to;
-        self
-    }
-
-    pub fn with_payload<T>(self, payload: T) -> MessageBuilder<T> {
-        MessageBuilder {
-            message: Message {
-                src: self.message.src,
-                dest: self.message.dest,
-                body: MessageBody {
-                    message_id: self.message.body.message_id,
-                    in_reply_to: self.message.body.in_reply_to,
-                    payload,
-                },
-            },
-        }
-    }
-
-    pub fn build(self) -> Message<P> {
-        self.message
-    }
-}
-
-pub type InitializationMessage = Message<InitializationPayload>;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
-pub enum InitializationPayload {
+pub enum InitializationRequest {
     Init {
         #[serde(rename = "node_id")]
         id: String,
         #[serde(rename = "node_ids")]
         neighbors: Vec<String>,
     },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum InitializationResponse {
     InitOk,
 }

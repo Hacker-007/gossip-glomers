@@ -4,7 +4,6 @@ use std::fmt::Display;
 pub enum MaelstromError {
     IOError,
     MessageParseError,
-    InitializationMessageMissing,
 }
 
 impl Display for MaelstromError {
@@ -12,9 +11,6 @@ impl Display for MaelstromError {
         match self {
             Self::IOError => write!(f, "[maelstrom error] - io error"),
             Self::MessageParseError => write!(f, "[maelstrom error] - failed to parse message"),
-            Self::InitializationMessageMissing => {
-                write!(f, "[maelstrom error] - initialization message missing")
-            }
         }
     }
 }

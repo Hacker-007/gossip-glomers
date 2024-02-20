@@ -3,4 +3,6 @@ members = [
     "maelstrom",
     "echo",
     "unique_id",
+    "broadcast_3a",
+    "broadcast_3b",
 ]

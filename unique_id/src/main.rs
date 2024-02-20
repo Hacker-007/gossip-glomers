@@ -1,59 +1,56 @@
-use std::io::{BufRead, Write};
+use std::io::Write;
 
-use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
 use maelstrom::{
-    message::{InitializationMessage, InitializationPayload, Message},
-    node::Node,
+    error::MaelstromError,
+    message::{InitializationRequest, Message},
+    node::MaelstromNode,
+    service::Service,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
-enum UniqueIDRequest {
+enum UniqueIdRequest {
     Generate,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
-enum UniqueIDResponse {
+enum UniqueIdResponse {
     GenerateOk { id: String },
 }
 
-fn initialize_node(line: String, stdout: &mut impl Write) -> anyhow::Result<Node> {
-    let init_message: InitializationMessage = line.parse()?;
-    let mut node: Node = Node::new(&init_message)?;
-    node.respond_to(&init_message)
-        .with_payload(InitializationPayload::InitOk)
-        .build()
-        .write_to(stdout)
-        .context("unable to write message to stdout")?;
+struct UniqueIdNode {
+    id: String,
+}
 
-    Ok(node)
+impl MaelstromNode for UniqueIdNode {
+    type InputPayload = UniqueIdRequest;
+    type OutputPayload = UniqueIdResponse;
+
+    fn new(init_message: &Message<InitializationRequest>) -> Self {
+        let InitializationRequest::Init { id, .. } = init_message.payload();
+        Self { id: id.clone() }
+    }
+
+    fn handle(
+        &mut self,
+        _: &Message<Self::InputPayload>,
+        service: &mut Service,
+        _: &mut impl Write
+    ) -> Result<Option<Self::OutputPayload>, MaelstromError>
+    where
+        Self: Sized,
+    {
+        let id = format!("id:{}:{}", self.id, service.outbox_id());
+        Ok(Some(UniqueIdResponse::GenerateOk { id }))
+    }
 }
 
 pub fn main() -> anyhow::Result<()> {
-    let stdin = std::io::stdin().lock();
-    let mut lines = stdin.lines();
+    let mut stdin = std::io::stdin().lock();
     let mut stdout = std::io::stdout().lock();
-
-    let init_line = lines
-        .next()
-        .expect("an initialization message")
-        .context("unable to read line from stdin")?;
-
-    let mut node = initialize_node(init_line, &mut stdout)?;
-    for line in lines {
-        let line = line.context("unable to read line from stdin")?;
-        let message: Message<UniqueIDRequest> = line.parse()?;
-        node.respond_to(&message)
-            .with_payload(UniqueIDResponse::GenerateOk {
-                id: format!("id:{}:{}", node.id(), node.message_id()),
-            })
-            .build()
-            .write_to(&mut stdout)
-            .context("unable to write message to stdout")?;
-    }
-
+    Service::new().run::<UniqueIdNode>(&mut stdin, &mut stdout)?;
     Ok(())
 }
