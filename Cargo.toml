@@ -5,4 +5,5 @@ members = [
     "unique_id",
     "broadcast_3a",
     "broadcast_3b",
+    "broadcast_3c",
 ]

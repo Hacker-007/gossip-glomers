@@ -29,6 +29,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "broadcast_3c"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "maelstrom",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "echo"
 version = "0.1.0"
 dependencies = [
