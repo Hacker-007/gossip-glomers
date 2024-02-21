@@ -1,8 +1,11 @@
-use std::io::Write;
-
 use serde::{Deserialize, Serialize};
 
-use maelstrom::{error::MaelstromError, message::{InitializationRequest, Message}, node::MaelstromNode, service::Service};
+use maelstrom::{
+    error::MaelstromError,
+    message::{InitializationRequest, Message},
+    node::MaelstromNode,
+    service::Service,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -21,6 +24,7 @@ struct EchoNode;
 impl MaelstromNode for EchoNode {
     type InputPayload = EchoRequest;
     type OutputPayload = EchoResponse;
+    type PeerPayload = ();
 
     fn new(_: &Message<InitializationRequest>) -> Self {
         Self
@@ -30,21 +34,16 @@ impl MaelstromNode for EchoNode {
         &mut self,
         message: &Message<Self::InputPayload>,
         _: &mut Service,
-        _: &mut impl Write
     ) -> Result<Option<Self::OutputPayload>, MaelstromError>
     where
         Self: Sized,
     {
         let EchoRequest::Echo { echo } = message.payload();
-        Ok(Some(EchoResponse::EchoOk {
-            echo: echo.clone(),
-        }))
+        Ok(Some(EchoResponse::EchoOk { echo: echo.clone() }))
     }
 }
 
 pub fn main() -> anyhow::Result<()> {
-    let mut stdin = std::io::stdin().lock();
-    let mut stdout = std::io::stdout().lock();
-    Service::new().run::<EchoNode>(&mut stdin, &mut stdout)?;
+    Service::new().run::<EchoNode>()?;
     Ok(())
 }

@@ -1,4 +1,6 @@
-use std::io::{BufRead, Write};
+use std::io::{BufRead, Read, StdoutLock};
+
+use serde::Serialize;
 
 use crate::{
     error::MaelstromError,
@@ -8,18 +10,26 @@ use crate::{
 
 pub struct Service {
     outbox_id: usize,
+    output: StdoutLock<'static>,
 }
 
 impl Service {
     pub fn new() -> Self {
-        Self { outbox_id: 1 }
+        Self {
+            outbox_id: 1,
+            output: std::io::stdout().lock(),
+        }
     }
 
     pub fn outbox_id(&self) -> usize {
         self.outbox_id
     }
 
-    pub fn respond_to<T, U>(&mut self, message: &Message<T>, payload: U) -> Message<U> {
+    pub fn respond_to<T, U: Serialize>(
+        &mut self,
+        message: &Message<T>,
+        payload: U,
+    ) -> Result<(), MaelstromError> {
         let message = Message {
             src: message.dest.clone(),
             dest: message.src.clone(),
@@ -31,10 +41,15 @@ impl Service {
         };
 
         self.outbox_id += 1;
-        message
+        message.write_to(&mut self.output)
     }
 
-    pub fn send_to<T>(&mut self, src: String, dest: String, payload: T) -> Message<T> {
+    pub fn rpc<T: Serialize>(
+        &mut self,
+        src: String,
+        dest: String,
+        payload: T,
+    ) -> Result<(), MaelstromError> {
         let message = Message {
             src,
             dest,
@@ -46,18 +61,14 @@ impl Service {
         };
 
         self.outbox_id += 1;
-        message
+        message.write_to(&mut self.output)
     }
 
-    pub fn run<N>(
-        &mut self,
-        input: &mut impl BufRead,
-        output: &mut impl Write,
-    ) -> Result<(), MaelstromError>
-    where
-        N: MaelstromNode,
-    {
+    pub fn run<N: MaelstromNode>(&mut self) -> Result<(), MaelstromError> {
+        let mut input = std::io::stdin().lock();
+
         let line = input
+            .by_ref()
             .lines()
             .next()
             .expect("an initialization message")
@@ -68,17 +79,20 @@ impl Service {
             .map_err(|_| MaelstromError::MessageParseError)?;
 
         let mut node = N::new(&init_message);
-        self.respond_to(&init_message, InitializationResponse::InitOk)
-            .write_to(output)?;
+        self.respond_to(&init_message, InitializationResponse::InitOk)?;
 
-        for line in input.lines() {
+        for line in input.by_ref().lines() {
             let line = line.map_err(|_| MaelstromError::IOError)?;
-            let message = line
-                .parse::<Message<N::InputPayload>>()
-                .map_err(|_| MaelstromError::MessageParseError)?;
-
-            if let Some(payload) = node.handle(&message, self, output)? {
-                self.respond_to(&message, payload).write_to(output)?;
+            if let Ok(message) = line.parse::<Message<N::PeerPayload>>() {
+                if let Some(payload) = node.handle_peer(&message, self)? {
+                    self.respond_to(&message, payload)?;
+                }
+            } else if let Ok(message) = line.parse::<Message<N::InputPayload>>() {
+                if let Some(payload) = node.handle(&message, self)? {
+                    self.respond_to(&message, payload)?;
+                }
+            } else {
+                return Err(MaelstromError::MessageParseError);
             }
         }
 

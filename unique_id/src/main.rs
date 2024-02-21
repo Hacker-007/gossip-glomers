@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use serde::{Deserialize, Serialize};
 
 use maelstrom::{
@@ -28,6 +26,7 @@ struct UniqueIdNode {
 impl MaelstromNode for UniqueIdNode {
     type InputPayload = UniqueIdRequest;
     type OutputPayload = UniqueIdResponse;
+    type PeerPayload = ();
 
     fn new(init_message: &Message<InitializationRequest>) -> Self {
         let InitializationRequest::Init { id, .. } = init_message.payload();
@@ -38,7 +37,6 @@ impl MaelstromNode for UniqueIdNode {
         &mut self,
         _: &Message<Self::InputPayload>,
         service: &mut Service,
-        _: &mut impl Write
     ) -> Result<Option<Self::OutputPayload>, MaelstromError>
     where
         Self: Sized,
@@ -49,8 +47,6 @@ impl MaelstromNode for UniqueIdNode {
 }
 
 pub fn main() -> anyhow::Result<()> {
-    let mut stdin = std::io::stdin().lock();
-    let mut stdout = std::io::stdout().lock();
-    Service::new().run::<UniqueIdNode>(&mut stdin, &mut stdout)?;
+    Service::new().run::<UniqueIdNode>()?;
     Ok(())
 }

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io::Write};
+use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
@@ -36,18 +36,16 @@ struct BroadcastNode {
 impl MaelstromNode for BroadcastNode {
     type InputPayload = BroadcastRequest;
     type OutputPayload = BroadcastResponse;
+    type PeerPayload = ();
 
     fn new(_: &Message<InitializationRequest>) -> Self {
-        Self {
-            values: vec![],
-        }
+        Self { values: vec![] }
     }
 
     fn handle(
         &mut self,
         message: &Message<Self::InputPayload>,
         _: &mut Service,
-        _: &mut impl Write
     ) -> Result<Option<Self::OutputPayload>, MaelstromError>
     where
         Self: Sized,
@@ -56,20 +54,16 @@ impl MaelstromNode for BroadcastNode {
             BroadcastRequest::Broadcast { message } => {
                 self.values.push(*message);
                 Ok(Some(BroadcastResponse::BroadcastOk))
-            },
-            BroadcastRequest::Read => {
-                Ok(Some(BroadcastResponse::ReadOk { messages: self.values.clone() }))
-            },
-            BroadcastRequest::Topology { .. } => {
-                Ok(Some(BroadcastResponse::TopologyOk))
-            },
+            }
+            BroadcastRequest::Read => Ok(Some(BroadcastResponse::ReadOk {
+                messages: self.values.clone(),
+            })),
+            BroadcastRequest::Topology { .. } => Ok(Some(BroadcastResponse::TopologyOk)),
         }
     }
 }
 
 pub fn main() -> anyhow::Result<()> {
-    let mut stdin = std::io::stdin().lock();
-    let mut stdout = std::io::stdout().lock();
-    Service::new().run::<BroadcastNode>(&mut stdin, &mut stdout)?;
+    Service::new().run::<BroadcastNode>()?;
     Ok(())
 }
