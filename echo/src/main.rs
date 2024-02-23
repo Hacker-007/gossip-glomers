@@ -37,8 +37,7 @@ impl MaelstromNode for EchoNode {
     ) -> Result<Option<Self::OutputPayload>, MaelstromError>
     where
         Self: Sized,
-    {
-        let EchoRequest::Echo { echo } = message.payload();
+    {let EchoRequest::Echo { echo } = message.payload();
         Ok(Some(EchoResponse::EchoOk { echo: echo.clone() }))
     }
 }

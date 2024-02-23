@@ -1,6 +1,8 @@
 use std::fmt::Display;
 
-#[derive(Debug)]
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
 pub enum MaelstromError {
     IOError,
     MessageParseError,

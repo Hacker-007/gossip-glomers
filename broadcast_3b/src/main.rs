@@ -74,7 +74,7 @@ impl MaelstromNode for BroadcastNode {
             BroadcastRequest::Broadcast { message: value } => {
                 self.values.insert(*value);
                 for neighbor in &self.network {
-                    service.rpc(
+                    service.peer_rpc(
                         self.id.clone(),
                         neighbor.clone(),
                         PeerPayload::Gossip {
@@ -101,12 +101,14 @@ impl MaelstromNode for BroadcastNode {
             PeerPayload::Gossip { messages } => {
                 let previous_messages = self.values.clone();
                 self.values.extend(messages);
-                Ok(Some(PeerPayload::GossipOk { messages: previous_messages }))
-            },
+                Ok(Some(PeerPayload::GossipOk {
+                    messages: previous_messages,
+                }))
+            }
             PeerPayload::GossipOk { messages } => {
                 self.values.extend(messages);
                 Ok(None)
-            },
+            }
         }
     }
 }

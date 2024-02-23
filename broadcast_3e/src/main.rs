@@ -1,4 +1,8 @@
-use std::{collections::{HashMap, HashSet}, sync::{self, mpsc::Receiver}, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{self, mpsc::Receiver},
+    time::Duration,
+};
 
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -66,7 +70,8 @@ impl BroadcastNode {
             self.id.clone(),
             neighbor.to_string(),
             PeerPayload::Gossip {
-                messages: must_notify,
+                // messages: must_notify,
+                messages: self.values.clone(),
             },
         )
     }
@@ -79,24 +84,17 @@ impl MaelstromNode for BroadcastNode {
 
     fn new(init_message: &Message<InitializationRequest>) -> Self {
         let InitializationRequest::Init { id, neighbors } = init_message.payload();
-        let network = neighbors
+        let network = neighbors.clone();
+        let seen_values = network
             .iter()
-            .filter(|&neighbor| neighbor != id)
-            .cloned()
-            .collect::<Vec<_>>();
-
-        let seen_values = neighbors
-            .iter()
-            .map(|id| (id.clone(), HashSet::new()))
-            .collect::<HashMap<_, _>>();
+            .map(|peer| (peer.clone(), HashSet::new()))
+            .collect();
 
         let (tx, rx) = sync::mpsc::channel();
-        std::thread::spawn(move || {
-            loop {
-                std::thread::sleep(Duration::from_millis(200));
-                if let Err(sync::mpsc::SendError(_)) = tx.send(()) {
-                    break;
-                }
+        std::thread::spawn(move || loop {
+            std::thread::sleep(Duration::from_millis(200));
+            if let Err(sync::mpsc::SendError(_)) = tx.send(()) {
+                break;
             }
         });
 
@@ -129,9 +127,10 @@ impl MaelstromNode for BroadcastNode {
         };
 
         if let Ok(_) = self.rx.try_recv() {
-            for neighbor in &self.network {
-                self.gossip_to(service, neighbor)?;
-            }
+            self.network
+                .iter()
+                .map(|neighbor| self.gossip_to(service, neighbor))
+                .collect::<Result<_, _>>()?;
         }
 
         response

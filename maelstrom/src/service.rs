@@ -44,7 +44,7 @@ impl Service {
         message.write_to(&mut self.output)
     }
 
-    pub fn rpc<T: Serialize>(
+    pub fn peer_rpc<T: Serialize>(
         &mut self,
         src: String,
         dest: String,
@@ -83,12 +83,12 @@ impl Service {
 
         for line in input.by_ref().lines() {
             let line = line.map_err(|_| MaelstromError::IOError)?;
-            if let Ok(message) = line.parse::<Message<N::PeerPayload>>() {
-                if let Some(payload) = node.handle_peer(&message, self)? {
+            if let Ok(message) = line.parse::<Message<N::InputPayload>>() {
+                if let Some(payload) = node.handle(&message, self)? {
                     self.respond_to(&message, payload)?;
                 }
-            } else if let Ok(message) = line.parse::<Message<N::InputPayload>>() {
-                if let Some(payload) = node.handle(&message, self)? {
+            } else if let Ok(message) = line.parse::<Message<N::PeerPayload>>() {
+                if let Some(payload) = node.handle_peer(&message, self)? {
                     self.respond_to(&message, payload)?;
                 }
             } else {

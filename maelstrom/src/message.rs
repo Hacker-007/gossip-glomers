@@ -11,6 +11,10 @@ pub struct Message<P> {
 }
 
 impl<P> Message<P> {
+    pub fn src(&self) -> &str {
+        &self.src
+    }
+
     pub fn payload(&self) -> &P {
         &self.body.payload
     }

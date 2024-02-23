@@ -6,4 +6,6 @@ members = [
     "broadcast_3a",
     "broadcast_3b",
     "broadcast_3c",
+    "broadcast_3d",
+    "broadcast_3e",
 ]
