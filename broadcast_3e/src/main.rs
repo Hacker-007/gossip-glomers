@@ -49,16 +49,16 @@ struct BroadcastNode {
 }
 
 impl BroadcastNode {
-    fn gossip_to(&self, service: &mut Service, neighbor: &str) -> Result<(), MaelstromError> {
-        let known_to_neighbor = &self.seen_values[neighbor];
+    fn gossip_to(&self, service: &mut Service, peer: &str) -> Result<(), MaelstromError> {
+        let known_to_peer = &self.seen_values[peer];
         let (already_known, mut must_notify): (HashSet<_>, HashSet<_>) = self
             .values
             .iter()
             .copied()
-            .partition(|message| known_to_neighbor.contains(message));
+            .partition(|message| known_to_peer.contains(message));
 
         let mut rng = rand::thread_rng();
-        let additional_cap = (must_notify.len() * 10 / 100) as u32;
+        let additional_cap = (must_notify.len() * 50 / 100) as u32;
         must_notify.extend(already_known.iter().filter(|_| {
             rng.gen_ratio(
                 additional_cap.min(already_known.len() as u32),
@@ -68,10 +68,10 @@ impl BroadcastNode {
 
         service.peer_rpc(
             self.id.clone(),
-            neighbor.to_string(),
+            peer.to_string(),
             PeerPayload::Gossip {
-                // messages: must_notify,
-                messages: self.values.clone(),
+                // messages: self.values.clone(),
+                messages: must_notify,
             },
         )
     }
@@ -92,7 +92,7 @@ impl MaelstromNode for BroadcastNode {
 
         let (tx, rx) = sync::mpsc::channel();
         std::thread::spawn(move || loop {
-            std::thread::sleep(Duration::from_millis(200));
+            std::thread::sleep(Duration::from_millis(450));
             if let Err(sync::mpsc::SendError(_)) = tx.send(()) {
                 break;
             }
@@ -129,7 +129,7 @@ impl MaelstromNode for BroadcastNode {
         if let Ok(_) = self.rx.try_recv() {
             self.network
                 .iter()
-                .map(|neighbor| self.gossip_to(service, neighbor))
+                .map(|peer| self.gossip_to(service, peer))
                 .collect::<Result<_, _>>()?;
         }
 
