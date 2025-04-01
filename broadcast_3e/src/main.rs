@@ -130,7 +130,7 @@ impl MaelstromNode for BroadcastNode {
             self.network
                 .iter()
                 .map(|peer| self.gossip_to(service, peer))
-                .collect::<Result<_, _>>()?;
+                .collect::<Result<Vec<_>, _>>()?;
         }
 
         response
